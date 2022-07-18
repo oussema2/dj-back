@@ -1,6 +1,7 @@
 const Dj = require("../Schemas/DjSchema");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const { listenerCount } = require("../Schemas/DjCategorieSchema");
 exports.register = (req, res) => {
   const reqBody = req.body;
   const dj = new Dj(reqBody);
@@ -11,7 +12,6 @@ exports.register = (req, res) => {
   dj.password = bcrypt.hashSync(dj.password, 10);
   dj.save((err, dj) => {
     if (err) {
-      console.log(err);
       if (err?.keyPattern["email"] === 1) {
         return res.send({
           status: 400,
@@ -86,21 +86,56 @@ exports.getUser = (req, res) => {
   }
 
   if (req.dj) {
-    Dj.find(req._id, (err, dj) => {
-      if (err) {
-        res.send({
-          status: 401,
-          message: err,
-        });
-      }
-      if (dj) {
-        res.send({
-          status: 200,
-          dj: dj,
-        });
-      }
+    Dj.findOne({ _id: req.dj._id }, (err, dj) => {
+      checkPartysDate(dj);
+      dj.save((err, djSaved) => {
+        if (err) {
+          res.send({
+            status: 401,
+            message: err,
+          });
+        }
+        if (djSaved) {
+          res.send({
+            status: 200,
+            dj: djSaved,
+          });
+        }
+      });
     });
   }
+};
+
+const checkPartysDate = (dj) => {
+  const partyEnded = dj.upcomingPartys.filter((pr) => {
+    const date = new Date();
+    const prDate = new Date(pr.date);
+    return date > prDate ? prDate : null;
+  });
+  dj.upcomingPartys = dj.upcomingPartys.filter((pr) => {
+    const date = new Date();
+    const prDate = new Date(pr.date);
+    return date < prDate ? prDate : null;
+  });
+  dj.previousPartys = [...dj.previousPartys, ...partyEnded];
+  return dj;
+};
+
+exports.getUserNormal = (req, res) => {
+  Dj.findOne({ businessName: req.params.id }, (err, dj) => {
+    if (err) {
+      res.send({
+        status: 401,
+        message: err,
+      });
+    }
+    if (dj) {
+      res.send({
+        status: 200,
+        dj: dj,
+      });
+    }
+  });
 };
 
 exports.getDjs = (req, res) => {
@@ -171,4 +206,151 @@ exports.getDjByBussinessName = (req, res) => {
       });
     }
   });
+};
+
+exports.acceptParty = (req, res) => {
+  const djid = req.params.dj;
+  const partyId = req.params.partyId;
+  Dj.findOne({ _id: djid }, (err, dj) => {
+    if (err) {
+      res.send({
+        status: 401,
+        message: err,
+      });
+    }
+    if (dj) {
+      const party = dj.pendingPartys.filter(
+        (item) => item._id.toString() === partyId
+      );
+      dj.pendingPartys = dj.pendingPartys.filter(
+        (item) => item._id.toString() !== partyId
+      );
+      dj.upcomingPartys.push(party[0]);
+      dj.save((err, djres) => {
+        if (err) {
+          res.send({
+            status: 401,
+            message: err,
+          });
+        }
+        if (djres) {
+          res.send({
+            status: 200,
+            dj: djres,
+          });
+        }
+      });
+      // res.send({
+      //   status: 200,
+      //   dj: dj,
+      // });
+    }
+  });
+};
+
+exports.declineParty = (req, res) => {
+  const partyId = req.params.partyId;
+  if (!req.dj) {
+    res.send({
+      status: 301,
+      message: "unauthorized",
+    });
+  }
+
+  Dj.findOne({ _id: req.dj._id }, (err, dj) => {
+    if (err) {
+      res.send({
+        status: 401,
+        message: err,
+      });
+    }
+    if (dj) {
+      dj.pendingPartys = dj.pendingPartys.filter(
+        (item) => item._id.toString() !== partyId
+      );
+      dj.save((err, djres) => {
+        if (err) {
+          res.send({
+            status: 401,
+            message: err,
+          });
+        }
+        if (djres) {
+          res.send({
+            status: 200,
+            dj: djres,
+          });
+        }
+      });
+    }
+  });
+};
+
+exports.searchDj = async (req, res) => {
+  var djRes = [];
+  const dj = req.params.dj === "fill" ? false : req.params.dj;
+  const state = req.params.state === "fill" ? false : req.params.state;
+  if (dj && !state) {
+    Dj.find({ "djs.otherTypes": { $regex: dj, $options: "i" } }, (err, djs) => {
+      if (err) {
+        res.send({
+          message: err,
+          status: 401,
+        });
+      }
+      if (djs) {
+        res.send({
+          message: err,
+          status: 200,
+          djs: djs,
+        });
+      }
+    });
+  }
+  if (state && !dj) {
+    const q2 = Dj.find({ state: { $regex: state, $options: "i" } });
+    q2.exec((err, djs) => {
+      if (err) {
+        res.send({
+          message: err,
+          status: 401,
+        });
+      }
+      if (djs) {
+        res.send({
+          status: 200,
+          djs: djs,
+        });
+      }
+    });
+  }
+  if (state && dj) {
+    Dj.find(
+      {
+        "djs.otherTypes": { $regex: dj, $options: "i" },
+        state: { $regex: state, $options: "i" },
+      },
+      (err, djs) => {
+        if (err) {
+          res.send({
+            message: err,
+            status: 401,
+          });
+        }
+        if (djs) {
+          res.send({
+            message: err,
+            status: 200,
+            djs: djs,
+          });
+        } else {
+          res.send({
+            message: err,
+            status: 200,
+            djs: djs,
+          });
+        }
+      }
+    );
+  }
 };

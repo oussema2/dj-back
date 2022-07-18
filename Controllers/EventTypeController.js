@@ -2,7 +2,6 @@ const EventType = require("../Schemas/EventTypeSchema");
 
 exports.addEventType = (req, res) => {
   const eventType = new EventType(req.body);
-  console.log(req.body);
   eventType.save((err, evType) => {
     if (err) {
       res.send({

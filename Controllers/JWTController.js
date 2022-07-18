@@ -6,7 +6,6 @@ exports.JWTChecker = (req, res, next) => {
       req.headers.authorization.split(" ")[1],
       "RESTFULAPIs",
       (err, decode) => {
-        console.log(decode);
         if (err) req.dj = undefined;
         req.dj = decode;
         next();

@@ -21,11 +21,9 @@ exports.fileStorage = multer.diskStorage({
       folderName = `/${req.body.id}`;
     }
 
-    //console.log(file.originalname);
     cb(null, "profileImages" + folderName + "/");
   },
   filename: (req, file, cb) => {
-    console.log(Date.now());
     const imageName =
       file.originalname + "-" + Date.now() + path.extname(file.originalname);
     req.body.images = !req.body.images ? [] : req.body.images;

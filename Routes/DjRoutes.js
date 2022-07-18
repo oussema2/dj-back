@@ -17,4 +17,12 @@ djRouter
 
 djRouter.route("/getLast10DJ").get(DjController.getLast10Dj);
 djRouter.route("/getAllDjs").get(DjController.getAllDjs);
+djRouter.route("/getUserNormal/:id").get(DjController.getUserNormal);
+
+djRouter.route("/acceptParty/:dj/:partyId").get(DjController.acceptParty);
+djRouter
+  .route("/declineParty/:partyId")
+  .get(JWTChecker.JWTChecker, DjController.declineParty);
+
+djRouter.route("/search/:dj/:state").get(DjController.searchDj);
 module.exports = djRouter;

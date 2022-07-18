@@ -2,11 +2,8 @@ const Dj = require("../Schemas/DjSchema");
 const Party = require("../Schemas/PartySchema");
 
 exports.addParty = async (req, res) => {
-  //   console.log(req.body);
-
   const party = new Party(req.body);
   //const djx = await Dj.findById({ _id: req.dj });
-  //   console.log(djx);
   party.save((err, party) => {
     if (err) {
       res.send({
@@ -23,7 +20,6 @@ exports.addParty = async (req, res) => {
           });
         }
         if (dj) {
-          // console.log(dj);
           dj.pendingPartys.push(party);
           dj.save((err, dj) => {
             res.send({

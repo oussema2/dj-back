@@ -87,7 +87,10 @@ exports.getUser = (req, res) => {
 
   if (req.dj) {
     Dj.findOne({ _id: req.dj._id }, (err, dj) => {
-      checkPartysDate(dj);
+      if (dj) {
+        checkPartysDate(dj);
+      }
+
       dj.save((err, djSaved) => {
         if (err) {
           res.send({
@@ -107,7 +110,7 @@ exports.getUser = (req, res) => {
 };
 
 const checkPartysDate = (dj) => {
-  const partyEnded = dj.upcomingPartys.filter((pr) => {
+  const partyEnded = dj.upcomingPartys?.filter((pr) => {
     const date = new Date();
     const prDate = new Date(pr.date);
     return date > prDate ? prDate : null;
@@ -291,7 +294,7 @@ exports.searchDj = async (req, res) => {
   const dj = req.params.dj === "fill" ? false : req.params.dj;
   const state = req.params.state === "fill" ? false : req.params.state;
   if (dj && !state) {
-    Dj.find({ "djs.otherTypes": { $regex: dj, $options: "i" } }, (err, djs) => {
+    Dj.find({ otherTypes: { $regex: dj, $options: "i" } }, (err, djs) => {
       if (err) {
         res.send({
           message: err,
